@@ -88,7 +88,7 @@ def infer_doc_type(file_name: str) -> str:
 
     if "sop" in lower_name:
         return "SOP_Operasional"
-    if any(k in lower_name for k in ["pergub", "qanun", "perka"]):
+    if any(k in lower_name for k in ["pergub", "qanun", "perka", "in_pres", "inpres"]):
         return "Regulasi_Hukum"
     if any(k in lower_name for k in ["pedoman", "perencanaan"]):
         return "Pedoman_Teknis"

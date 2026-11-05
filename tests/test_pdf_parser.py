@@ -56,6 +56,7 @@ class TestMetadataInference:
         assert infer_doc_type("a02_buku_2_provinsi_aceh_sops1.pdf") == "SOP_Operasional"
         assert infer_doc_type("Pergub Provinsi Aceh Nomor 54 Tahun 2023.pdf") == "Regulasi_Hukum"
         assert infer_doc_type("Qanun_Aceh_Nomor_5_Tahun_2010_Tentang_Pe.pdf") == "Regulasi_Hukum"
+        assert infer_doc_type("In_Pres No.1 Tahun 2005.pdf") == "Regulasi_Hukum"
         assert infer_doc_type("perka-15-tahun-2012-tentang-pedoman.pdf") == "Regulasi_Hukum"
         assert infer_doc_type("Perencanaan Tempat Evakuasi Sementara Sunami.pdf") == "Pedoman_Teknis"
         assert infer_doc_type("Pedoman_Sosialisasi_Penanggulangan_Bencana.pdf") == "Pedoman_Teknis"
