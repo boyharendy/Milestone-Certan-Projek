@@ -33,6 +33,7 @@ Thumbs.db
 
 #supaya peta yang besar tidak ikut ter-commit
 data/*.graphml
+*.zip
 # File lokal internal kelompok (jangan di-commit)
 pembagian.md
 T03_Milestone3_Vector_Knowledge_Base_Search.pdf
