@@ -43,7 +43,7 @@ def build_knowledge_base(
     # 1. Ekstraksi Dokumen
     print("\n[1/4] Mengekstrak teks dari seluruh dokumen PDF...")
     parser = PDFParser()
-    parsed_docs = parser.parse_directory(docs_path)
+    parsed_docs = parser.parse_directory(docs_path, recursive=True)
     print(f"      -> Berhasil mengekstrak {len(parsed_docs)} dokumen PDF.")
 
     # 2. Chunking

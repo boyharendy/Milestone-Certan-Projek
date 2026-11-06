@@ -67,12 +67,12 @@ Milestone/
 │   ├── search.py                       # Algoritma pencarian UCS dan A*
 │   ├── visualize.py                    # Visualisasi kinerja graf Milestone 1
 │   └── visualize_map.py                # Visualisasi rute evakuasi peta riil
-├── tests/                              # Suite Pengujian Otomatis (67 Unit Tests)
-│   ├── test_pdf_parser.py              # Pengujian parser teks dan pembersihan noise
+├── tests/                              # Suite Pengujian Otomatis (70 Unit Tests)
+│   ├── test_pdf_parser.py              # Pengujian parser teks, normalisasi, & pemindaian rekursif
 │   ├── test_chunker.py                 # Pengujian recursive chunking & overlap
 │   ├── test_vector_store.py            # Pengujian ChromaDB persisten & hybrid filter
-│   ├── test_retrieval.py               # Pengujian Semantic Retriever & OOD thresholding
-│   ├── test_benchmark_retrieval.py     # Pengujian struktur kueri bisnis & visualisasi
+│   ├── test_retrieval.py               # Pengujian True Hybrid Search, skor leksikal, & OOD thresholding
+│   ├── test_benchmark_retrieval.py     # Pengujian struktur kueri bisnis, ground truth, & plot
 │   ├── test_data_loader.py             # Pengujian matriks jarak dan peta
 │   ├── test_search.py                  # Pengujian model graf dan optimalitas UCS/A*
 │   └── test_solver.py                  # Pengujian operator dan penalti GA
@@ -98,9 +98,10 @@ Korpus mencakup 10 dokumen otoritatif kebencanaan Aceh yang terbagi ke dalam emp
 9. `buku_aceh_pasca_lima_belas_tahun_tsunami1.pdf` (*Kajian Akademik* - Evaluasi 15 Tahun Tsunami)
 10. `meydinafa,+Journal+manager,+JP+V10+N1_37-48.pdf` (*Kajian Akademik* - Tata Ruang Wilayah Pesisir)
 
-### 2. Prapemrosesan & Pembersihan Teks (`pdf_parser.py`)
+### 2. Prapemrosesan & Pembersihan Teks (`pdf_parser.py`, `indexer.py`)
 - Ekstraksi teks per halaman menggunakan pustaka `pypdf`.
-- **Normalisasi NFKC** untuk standarisasi ligatur dan karakter tipografi.
+- **Pemindaian Direktori Rekursif:** `indexer.py` memanggil parser dengan `recursive=True` sehingga menjangkau seluruh hierarki folder dokumen tanpa ada berkas yang terlewat.
+- **Normalisasi NFKC** untuk standarisasi ligatur dan karakter tipografi Unicode.
 - **Hyphenation Repair:** Menyambung kata yang terpotong tanda hubung di akhir baris (`r'(\w+)-\n(\w+)' -> r'\1\2'`).
 - **Sanitasi Whitespace:** Menghilangkan karakter kontrol non-printable dan merapikan spasi berulang.
 
@@ -116,32 +117,43 @@ Korpus mencakup 10 dokumen otoritatif kebencanaan Aceh yang terbagi ke dalam emp
 - **Persistent Storage:** `chromadb.PersistentClient` pada direktori `data/chroma_db/`, koleksi `disaster_knowledge_base`, metrik jarak `cosine` ($Distance = 1 - CosineSimilarity$).
 - **Resolusi Jalur Absolut:** Menggunakan pendeteksi project root otomatis (`Path(__file__).resolve().parent.parent.parent / "data/chroma_db"`) sehingga sistem berjalan konsisten dari direktori mana pun.
 
-### 5. Semantic Retriever dengan Confidence Thresholding (`retriever.py`)
-Retriever menyaring kueri menggunakan ambang batas kemiripan $\tau = 0.50$:
-- Jika $\text{Top Similarity} \ge 0.50 \implies$ Kueri diterima (`ACCEPTED`) dan potongan dokumen relevan disajikan.
-- Jika $\text{Top Similarity} < 0.50 \implies$ Kueri ditolak secara presisi (`REJECTED_OOD`) sebagai kueri di luar domain kebencanaan.
-- Mendukung *metadata filtering* bertingkat (`doc_type` dan `source_file`).
+### 5. True Hybrid Search & Confidence Thresholding (`retriever.py`)
+Retriever menerapkan arsitektur **True Hybrid Search** menggabungkan dua paradigma temu balik informasi:
+1. **Dense Semantic Search:** Menangkap kedekatan semantik, hubungan konseptual, dan parafrase bahasa alami berbasis representasi vektor Sentence-Transformers ($Score_{dense}$).
+2. **Sparse / Lexical Keyword Search:** Mengukur kecocokan istilah teknis, nama regulasi, dan akronim melalui representasi overlap token dan frekuensi term ($Score_{lexical}$).
+3. **Hybrid Scoring Formula:**
+   $$Score_{hybrid} = \alpha \cdot Score_{dense} + (1 - \alpha) \cdot Score_{lexical}$$
+   dengan bobot seimbang terkalibrasi $\alpha = 0.70$ (70% semantik, 30% leksikal).
+4. **Mode Pencarian Fleksibel:** Mendukung `SearchMode.HYBRID` (default), `SearchMode.SEMANTIC` (vektor murni), dan `SearchMode.LEXICAL` (leksikal murni).
+5. **Confidence Thresholding & OOD Rejection:**
+   - Ambang batas $\tau = 0.50$ diterapkan setelah re-ranking hibrida.
+   - Jika $\text{Top Score} \ge 0.50 \implies$ Kueri diterima (`ACCEPTED`) beserta potongan dokumen relevan.
+   - Jika $\text{Top Score} < 0.50 \implies$ Kueri ditolak secara presisi (`REJECTED_OOD`) sebagai kueri di luar domain kebencanaan.
+   - Mendukung penyaringan metadata bertingkat (`doc_type` dan `source_file`).
 
 ### 6. Hasil Benchmark Temu Balik Semantik (12 Kueri Bisnis)
 
-Pengujian benchmark dieksekusi melalui skrip `src/benchmark_retrieval.py` dengan hasil kuantitatif:
+Pengujian benchmark dieksekusi melalui skrip `src/benchmark_retrieval.py` dengan evaluasi status kueri dan *ground truth target documents*:
 
-| Kategori Kueri | Jumlah Kueri | Rentang Cosine Similarity | Status Evaluasi | Tingkat Keberhasilan |
+| Kategori Kueri | Jumlah Kueri | Rentang Similarity | Status Evaluasi | Relevansi Ground Truth (Top-1) |
 | :--- | :---: | :---: | :---: | :---: |
-| **Spesifik / Regulasi (SOP)** | 4 | **0.7468 – 0.8688** | `accepted` | 100% (4/4) |
-| **Parafrase Bahasa Awam** | 2 | **0.6944 – 0.7275** | `accepted` | 100% (2/2) |
-| **Ambigu / Singkat** | 2 | **0.6211 – 0.8519** | `accepted` | 100% (2/2) |
-| **Out-of-Domain (OOD)** | 4 | **0.2993 – 0.4458** | `rejected_out_of_domain` | 100% (4/4) |
+| **Spesifik / Regulasi (SOP)** | 4 | **0.7245 – 0.8698** | `accepted` | 100% (4/4 Cocok Dokumen Resmi) |
+| **Parafrase Bahasa Awam** | 2 | **0.5745 – 0.6994** | `accepted` | 100% (2/2 Cocok Dokumen Resmi) |
+| **Ambigu / Singkat** | 2 | **0.5138 – 0.8555** | `accepted` | 100% (2/2 Cocok Dokumen Resmi) |
+| **Out-of-Domain (OOD)** | 4 | **0.2232 – 0.3930** | `rejected_out_of_domain` | 100% (4/4 Ditolak Tanpa Halusinasi) |
 
 #### Ringkasan Metrik Kinerja:
-- **Akurasi Keseluruhan:** **100.00% (12 / 12 kueri berhasil diprediksi tepat)**
+- **Akurasi Status (In/OOD):** **100.00% (12 / 12 kueri berhasil diklasifikasi tepat)**
+- **Relevansi Ground Truth (Top-1 & Top-K):** **100.00% (12 / 12 kueri menghasilkan dokumen rujukan otoritatif yang benar)**
 - **In-Domain Recall:** **100.00% (8 / 8 kueri kebencanaan diterima)**
 - **OOD Rejection Precision:** **100.00% (4 / 4 kueri luar domain ditolak)**
-- **Rata-rata Kemiripan In-Domain:** **0.7635**
-- **Rata-rata Kemiripan OOD:** **0.3715**
-- **Margin Pemisahan (Separation Gap):** **0.3921** (~39.2% margin keamanan pemisahan)
-- **Rata-rata Latensi Inferensi:** ~15–19 ms per kueri.
-- **Berkas Output:** Laporan data di `output/retrieval_benchmark.json` dan visualisasi grafik di `output/retrieval_similarity.png`.
+- **Rata-rata Kemiripan In-Domain:** **0.7188**
+- **Rata-rata Kemiripan OOD:** **0.3118**
+- **Margin Pemisahan (Separation Gap):** **0.4071** (~40.71% margin keamanan pemisahan)
+- **Karakteristik Latensi Sistem:**
+  - *Inisialisasi Model Awal (Cold-Start):* ~50 detik (waktu satu kali pemuatan bobot model PyTorch & Sentence-Transformers ke CPU Windows saat proses booting).
+  - *Latensi Inferensi Operasional (Steady-State):* **48.82 ms** per kueri (diukur transparan pasca warm-up kueri, mencakup pencarian vektor ChromaDB dan re-ranking hibrida leksikal).
+- **Berkas Output:** Laporan terstruktur di `output/retrieval_benchmark.json` dan visualisasi grafik ambang batas di `output/retrieval_similarity.png`.
 
 ---
 
@@ -159,11 +171,11 @@ cd Milestone-Certan-Projek
 uv sync
 ```
 
-### 2. Menjalankan Seluruh Pengujian Otomatis (67 Unit Tests)
+### 2. Menjalankan Seluruh Pengujian Otomatis (70 Unit Tests)
 ```powershell
 uv run pytest
 ```
-*Hasil: 67 passed (100% Lulus mencakup Milestone 1, 2, dan 3).*
+*Hasil: 70 passed (100% Lulus mencakup Milestone 1, 2, dan 3).*
 
 Untuk pengujian khusus modul Milestone 3:
 ```powershell

@@ -20,7 +20,7 @@ from src.knowledge_base.retriever import SemanticRetriever, QueryStatus
 from src.knowledge_base.vector_store import VectorStore
 
 
-# Matriks kueri uji bisnis kebencanaan terstruktur
+# Matriks kueri uji bisnis kebencanaan terstruktur dengan ground truth dokumen target
 TEST_QUERY_SUITE = [
     # 1. Kueri Spesifik / Regulasi & Teknis In-Domain
     {
@@ -28,6 +28,11 @@ TEST_QUERY_SUITE = [
         "category": "Spesifik",
         "query": "prosedur aktivasi sirine peringatan dini tsunami",
         "expected_status": "accepted",
+        "expected_target_docs": [
+            "Perencanaan Tempat Evakuasi Sementara Sunami.pdf",
+            "perka-15-tahun-2012-tentang-pedoman-pengendalian-operasi-penanggulangan-bencana-pusdalops-pb.pdf",
+            "a02_buku_2_provinsi_aceh_sops1.pdf",
+        ],
         "description": "Istilah teknis SOP Pusdalops PB / Sistem peringatan dini",
     },
     {
@@ -35,6 +40,9 @@ TEST_QUERY_SUITE = [
         "category": "Spesifik",
         "query": "kriteria struktur dan kapasitas Tempat Evakuasi Sementara TES tsunami",
         "expected_status": "accepted",
+        "expected_target_docs": [
+            "Perencanaan Tempat Evakuasi Sementara Sunami.pdf",
+        ],
         "description": "Standar teknis bangunan vertikal TES",
     },
     {
@@ -42,6 +50,11 @@ TEST_QUERY_SUITE = [
         "category": "Spesifik",
         "query": "tugas dan wewenang BPBA dalam penyelenggaraan penanggulangan bencana",
         "expected_status": "accepted",
+        "expected_target_docs": [
+            "perka-15-tahun-2012-tentang-pedoman-pengendalian-operasi-penanggulangan-bencana-pusdalops-pb.pdf",
+            "Pergub Provinsi Aceh Nomor 54 Tahun 2023.pdf",
+            "Qanun_Aceh_Nomor_5_Tahun_2010_Tentang_Pe.pdf",
+        ],
         "description": "Pasal regulasi Qanun / Pergub Aceh",
     },
     {
@@ -49,6 +62,11 @@ TEST_QUERY_SUITE = [
         "category": "Spesifik",
         "query": "instruksi presiden penanganan darurat dan rekonstruksi pasca tsunami NAD",
         "expected_status": "accepted",
+        "expected_target_docs": [
+            "In_Pres No.1 Tahun 2005.pdf",
+            "meydinafa,+Journal+manager,+JP+V10+N1_37-48.pdf",
+            "buku_aceh_pasca_lima_belas_tahun_tsunami1.pdf",
+        ],
         "description": "Inpres No. 1 Tahun 2005 tentang rehab-rekon pasca tsunami",
     },
     # 2. Kueri Parafrase / Bahasa Alami Non-Literal In-Domain
@@ -57,6 +75,11 @@ TEST_QUERY_SUITE = [
         "category": "Parafrase",
         "query": "tempat aman berlindung saat ombak laut pasang besar di Banda Aceh",
         "expected_status": "accepted",
+        "expected_target_docs": [
+            "meydinafa,+Journal+manager,+JP+V10+N1_37-48.pdf",
+            "Perencanaan Tempat Evakuasi Sementara Sunami.pdf",
+            "buku_aceh_pasca_lima_belas_tahun_tsunami1.pdf",
+        ],
         "description": "Bahasa awam tanpa kata eksplisit 'tsunami'",
     },
     {
@@ -64,6 +87,12 @@ TEST_QUERY_SUITE = [
         "category": "Parafrase",
         "query": "apa yang harus dilakukan warga pesisir saat merasakan gempa bumi kuat",
         "expected_status": "accepted",
+        "expected_target_docs": [
+            "buku_aceh_pasca_lima_belas_tahun_tsunami1.pdf",
+            "Pedoman_Sosialisasi_Penanggulangan_Bencana.pdf",
+            "a02_buku_2_provinsi_aceh_sops1.pdf",
+            "Perencanaan Tempat Evakuasi Sementara Sunami.pdf",
+        ],
         "description": "Prosedur evakuasi mandiri berbasis skenario masyarakat",
     },
     # 3. Kueri Ambigu / Parsial In-Domain
@@ -72,6 +101,10 @@ TEST_QUERY_SUITE = [
         "category": "Ambigu",
         "query": "kapasitas evakuasi tsunami",
         "expected_status": "accepted",
+        "expected_target_docs": [
+            "Perencanaan Tempat Evakuasi Sementara Sunami.pdf",
+            "meydinafa,+Journal+manager,+JP+V10+N1_37-48.pdf",
+        ],
         "description": "Kueri singkat multi-interpretasi",
     },
     {
@@ -79,6 +112,11 @@ TEST_QUERY_SUITE = [
         "category": "Ambigu",
         "query": "jalur logistik darurat",
         "expected_status": "accepted",
+        "expected_target_docs": [
+            "perka-15-tahun-2012-tentang-pedoman-pengendalian-operasi-penanggulangan-bencana-pusdalops-pb.pdf",
+            "a02_buku_2_provinsi_aceh_sops1.pdf",
+            "buku_aceh_pasca_lima_belas_tahun_tsunami1.pdf",
+        ],
         "description": "Manajemen pendistribusian logistik darurat",
     },
     # 4. Kueri Out-of-Domain (OOD / Distractor)
@@ -87,6 +125,7 @@ TEST_QUERY_SUITE = [
         "category": "Out-of-Domain",
         "query": "resep membuat mie aceh tradisional bumbu rempah kepiting",
         "expected_status": "rejected_out_of_domain",
+        "expected_target_docs": [],
         "description": "Topik kuliner di luar domain kebencanaan",
     },
     {
@@ -94,6 +133,7 @@ TEST_QUERY_SUITE = [
         "category": "Out-of-Domain",
         "query": "harga tiket bioskop Hermes Palace XXI Banda Aceh",
         "expected_status": "rejected_out_of_domain",
+        "expected_target_docs": [],
         "description": "Topik hiburan komersial non-kebencanaan",
     },
     {
@@ -101,6 +141,7 @@ TEST_QUERY_SUITE = [
         "category": "Out-of-Domain",
         "query": "cara memperbaiki laptop windows mengalami blue screen of death",
         "expected_status": "rejected_out_of_domain",
+        "expected_target_docs": [],
         "description": "Topik perangkat keras / IT umum",
     },
     {
@@ -108,6 +149,7 @@ TEST_QUERY_SUITE = [
         "category": "Out-of-Domain",
         "query": "analisis pergerakan saham perbankan di bursa efek indonesia",
         "expected_status": "rejected_out_of_domain",
+        "expected_target_docs": [],
         "description": "Topik finansial dan pasar modal",
     },
 ]
@@ -132,6 +174,14 @@ def run_retrieval_benchmark(
 
     vector_store = VectorStore()
     retriever = SemanticRetriever(vector_store=vector_store, threshold=threshold)
+
+    # Warm-up model untuk memisahkan waktu inisialisasi cold-start dari latensi steady-state
+    print("Menyiapkan model dan eksekusi warm-up kueri...")
+    warmup_start = time.perf_counter()
+    _ = retriever.retrieve(query="uji coba pemanasan model temu balik kebencanaan", top_k=1)
+    cold_start_sec = time.perf_counter() - warmup_start
+    print(f"[OK] Warm-up selesai ({cold_start_sec:.2f} detik). Latensi inferensi berikut mencerminkan performa operasional stabil.")
+    print("=" * 75)
 
     results: List[Dict[str, Any]] = []
     in_domain_scores: List[float] = []
@@ -168,10 +218,27 @@ def run_retrieval_benchmark(
             if retrieval_res.items
             else "None"
         )
+        top_source_file = retrieval_res.items[0].source_file if retrieval_res.items else ""
+        retrieved_files = [it.source_file for it in retrieval_res.items]
+
+        # Evaluasi Ground Truth Dokumen Target
+        expected_docs = item.get("expected_target_docs", [])
+        if category == "Out-of-Domain":
+            is_top1_relevant = (actual == expected)
+            is_topk_relevant = (actual == expected)
+        else:
+            is_top1_relevant = any(
+                expected_doc.lower() in top_source_file.lower() for expected_doc in expected_docs
+            )
+            is_topk_relevant = any(
+                any(expected_doc.lower() in rf.lower() for expected_doc in expected_docs)
+                for rf in retrieved_files
+            )
 
         status_flag = "[PASS]" if is_correct else "[FAIL]"
+        relevance_flag = "GT-MATCH" if is_top1_relevant else "GT-MISMATCH"
         print(
-            f"{status_flag} {qid} [{category:<13}] Sim: {top_score:.4f} | Latency: {elapsed_ms:6.2f}ms | Status: {actual}"
+            f"{status_flag} {qid} [{category:<13}] Sim: {top_score:.4f} | Latency: {elapsed_ms:6.2f}ms | {relevance_flag}"
         )
         print(f"       Kueri : \"{query_text}\"")
         if retrieval_res.items:
@@ -189,9 +256,15 @@ def run_retrieval_benchmark(
                 "expected_status": expected,
                 "actual_status": actual,
                 "is_correct": is_correct,
+                "expected_target_docs": expected_docs,
+                "is_top1_relevant": is_top1_relevant,
+                "is_topk_relevant": is_topk_relevant,
                 "top_similarity_score": round(top_score, 4),
                 "latency_ms": round(elapsed_ms, 2),
                 "top_source": top_source,
+                "retrieved_sources": [
+                    f"{it.source_file} (p.{it.page_number})" for it in retrieval_res.items
+                ],
                 "rejection_reason": retrieval_res.rejection_reason,
             }
         )
@@ -201,6 +274,11 @@ def run_retrieval_benchmark(
     avg_in_domain = sum(in_domain_scores) / len(in_domain_scores) if in_domain_scores else 0.0
     avg_ood = sum(ood_scores) / len(ood_scores) if ood_scores else 0.0
     accuracy = (correct_predictions / len(TEST_QUERY_SUITE)) * 100.0
+
+    top1_relevance_count = sum(1 for r in results if r["is_top1_relevant"])
+    topk_relevance_count = sum(1 for r in results if r["is_topk_relevant"])
+    top1_relevance_percent = (top1_relevance_count / len(TEST_QUERY_SUITE)) * 100.0
+    topk_relevance_percent = (topk_relevance_count / len(TEST_QUERY_SUITE)) * 100.0
 
     in_domain_total = len(in_domain_scores)
     in_domain_correct = sum(
@@ -216,13 +294,18 @@ def run_retrieval_benchmark(
 
     summary = {
         "total_queries": len(TEST_QUERY_SUITE),
+        "overall_status_accuracy_percent": round(accuracy, 2),
         "overall_accuracy_percent": round(accuracy, 2),
+        "top1_ground_truth_relevance_percent": round(top1_relevance_percent, 2),
+        "topk_ground_truth_relevance_percent": round(topk_relevance_percent, 2),
         "in_domain_recall_percent": round(in_domain_recall, 2),
         "ood_rejection_precision_percent": round(ood_precision, 2),
         "similarity_threshold": threshold,
         "avg_in_domain_similarity": round(avg_in_domain, 4),
         "avg_ood_similarity": round(avg_ood, 4),
         "score_margin": round(avg_in_domain - avg_ood, 4),
+        "cold_start_load_seconds": round(cold_start_sec, 2),
+        "avg_steady_state_latency_ms": round(avg_latency, 2),
         "avg_latency_ms": round(avg_latency, 2),
     }
 
@@ -253,13 +336,16 @@ def run_retrieval_benchmark(
     print("RINGKASAN METRIK EVALUASI TEMU BALIK")
     print("=" * 75)
     print(f"Total Dokumen di Database   : {vector_store.count()} chunks")
-    print(f"Akurasi Keseluruhan         : {accuracy:.2f}% ({correct_predictions}/{len(TEST_QUERY_SUITE)})")
+    print(f"Akurasi Status (In/OOD)     : {accuracy:.2f}% ({correct_predictions}/{len(TEST_QUERY_SUITE)})")
+    print(f"Relevansi Ground Truth (Top1): {top1_relevance_percent:.2f}% ({top1_relevance_count}/{len(TEST_QUERY_SUITE)})")
+    print(f"Relevansi Ground Truth (TopK): {topk_relevance_percent:.2f}% ({topk_relevance_count}/{len(TEST_QUERY_SUITE)})")
     print(f"In-Domain Recall            : {in_domain_recall:.2f}% ({in_domain_correct}/{in_domain_total})")
     print(f"OOD Rejection Precision     : {ood_precision:.2f}% ({ood_correct}/{ood_total})")
     print(f"Rata-rata Kemiripan In-Domain: {avg_in_domain:.4f}")
     print(f"Rata-rata Kemiripan OOD      : {avg_ood:.4f}")
     print(f"Margin Pemisahan (Gap)       : {summary['score_margin']:.4f}")
-    print(f"Rata-rata Latensi Inferensi : {avg_latency:.2f} ms")
+    print(f"Waktu Cold-Start (Init)     : {cold_start_sec:.2f} detik")
+    print(f"Rata-rata Latensi Steady    : {avg_latency:.2f} ms")
     print("=" * 75)
 
     return report

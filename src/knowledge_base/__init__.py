@@ -7,7 +7,13 @@ from src.knowledge_base.embedding_service import (
     SentenceTransformerEmbeddingService,
 )
 from src.knowledge_base.vector_store import VectorStore, SearchResultItem
-from src.knowledge_base.retriever import SemanticRetriever, RetrievalResult, QueryStatus
+from src.knowledge_base.retriever import (
+    SemanticRetriever,
+    RetrievalResult,
+    QueryStatus,
+    SearchMode,
+    compute_lexical_score,
+)
 
 __all__ = [
     "PDFParser",
@@ -22,4 +28,6 @@ __all__ = [
     "SemanticRetriever",
     "RetrievalResult",
     "QueryStatus",
+    "SearchMode",
+    "compute_lexical_score",
 ]

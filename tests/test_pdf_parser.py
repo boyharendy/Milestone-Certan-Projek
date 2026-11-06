@@ -129,3 +129,29 @@ class TestPDFParser:
         names = {d.metadata.file_name for d in docs}
         assert names == {"doc1_qanun.pdf", "doc2_sop.pdf"}
 
+    def test_parse_directory_recursive(self, tmp_path):
+        """Memverifikasi bahwa parser dapat membaca PDF dalam subfolder secara rekursif."""
+        sub_dir = tmp_path / "subfolder"
+        sub_dir.mkdir()
+
+        p1 = tmp_path / "doc_root.pdf"
+        p2 = sub_dir / "doc_nested.pdf"
+
+        for p in [p1, p2]:
+            w = PdfWriter()
+            w.add_blank_page(width=100, height=100)
+            with open(p, "wb") as f:
+                w.write(f)
+
+        parser = PDFParser()
+        # Non-recursive hanya menemukan file di root folder
+        docs_flat = parser.parse_directory(str(tmp_path), recursive=False)
+        assert len(docs_flat) == 1
+        assert docs_flat[0].metadata.file_name == "doc_root.pdf"
+
+        # Recursive menemukan kedua file (root + subfolder)
+        docs_rec = parser.parse_directory(str(tmp_path), recursive=True)
+        assert len(docs_rec) == 2
+        names_rec = {d.metadata.file_name for d in docs_rec}
+        assert names_rec == {"doc_root.pdf", "doc_nested.pdf"}
+

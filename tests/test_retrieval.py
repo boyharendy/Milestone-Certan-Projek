@@ -10,7 +10,13 @@ import pytest
 from src.knowledge_base.chunker import DocumentChunk
 from src.knowledge_base.embedding_service import DummyEmbeddingService
 from src.knowledge_base.vector_store import VectorStore, SearchResultItem
-from src.knowledge_base.retriever import SemanticRetriever, RetrievalResult, QueryStatus
+from src.knowledge_base.retriever import (
+    SemanticRetriever,
+    RetrievalResult,
+    QueryStatus,
+    SearchMode,
+    compute_lexical_score,
+)
 
 
 @pytest.fixture
@@ -189,3 +195,38 @@ class TestSemanticRetriever:
         assert results[1].status == QueryStatus.EMPTY_QUERY
         assert results[2].status == QueryStatus.ACCEPTED
         assert results[2].query == queries[2]
+
+    def test_compute_lexical_score(self):
+        """Memverifikasi fungsi penghitungan skor leksikal keyword."""
+        query = "aktivasi sirine tsunami"
+        doc_match = "Prosedur aktivasi sirine peringatan dini tsunami di pesisir Banda Aceh."
+        doc_irrelevant = "Resep membuat mie aceh tradisional bumbu kepiting kuah kari."
+
+        score_match = compute_lexical_score(query, doc_match)
+        score_irrelevant = compute_lexical_score(query, doc_irrelevant)
+
+        assert score_match > 0.50
+        assert score_irrelevant == 0.0
+        assert compute_lexical_score("", doc_match) == 0.0
+
+    def test_search_modes(self, populated_vector_store, sample_chunks):
+        """Memverifikasi ketiga mode pencarian: semantic, lexical, dan hybrid."""
+        retriever = SemanticRetriever(vector_store=populated_vector_store, threshold=0.10)
+        query = "aktivasi sirine tsunami"
+
+        # Mode Semantic
+        res_sem = retriever.retrieve(query, mode=SearchMode.SEMANTIC)
+        assert res_sem.mode == SearchMode.SEMANTIC
+        assert res_sem.status == QueryStatus.ACCEPTED
+
+        # Mode Lexical
+        res_lex = retriever.retrieve(query, mode=SearchMode.LEXICAL)
+        assert res_lex.mode == SearchMode.LEXICAL
+        assert res_lex.status == QueryStatus.ACCEPTED
+        assert res_lex.items[0].source_file == "sop_tsunami.pdf"
+
+        # Mode Hybrid (Default)
+        res_hyb = retriever.retrieve(query, mode=SearchMode.HYBRID, alpha=0.70)
+        assert res_hyb.mode == SearchMode.HYBRID
+        assert res_hyb.status == QueryStatus.ACCEPTED
+        assert len(res_hyb.items) > 0

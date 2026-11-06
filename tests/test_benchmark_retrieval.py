@@ -20,7 +20,13 @@ def test_test_query_suite_structure():
         assert "category" in q
         assert "query" in q and len(q["query"].strip()) > 0
         assert q["expected_status"] in ("accepted", "rejected_out_of_domain")
+        assert "expected_target_docs" in q
+        assert isinstance(q["expected_target_docs"], list)
         assert "description" in q
+        if q["category"] == "Out-of-Domain":
+            assert len(q["expected_target_docs"]) == 0
+        else:
+            assert len(q["expected_target_docs"]) > 0
 
 
 def test_generate_similarity_plot(tmp_path):
